@@ -70,7 +70,7 @@ List<T> concat(List<T> a, List<T> b)
 template<class U, class T, class F>
 List<U> fmap(F f, List<T> lst)
 {
-	static_assert(std::is_convertible<F, std::function<U(T)>>::m_value,
+	static_assert(std::is_convertible<F, std::function<U(T)>>::value,
 		"fmap requires a function type U(T)");
 	if (lst.isEmpty())
 		return List<U>();
@@ -81,7 +81,7 @@ List<U> fmap(F f, List<T> lst)
 template<class T, class P>
 List<T> filter(P p, List<T> lst)
 {
-	static_assert(std::is_convertible<P, std::function<bool(T)>>::m_value,
+	static_assert(std::is_convertible<P, std::function<bool(T)>>::value,
 		"filter requires a function type bool(T)");
 	if (lst.isEmpty())
 		return List<T>();
@@ -94,7 +94,7 @@ List<T> filter(P p, List<T> lst)
 template<class T, class U, class F>
 U foldr(F f, U acc, List<T> lst)
 {
-	static_assert(std::is_convertible<F, std::function<U(T, U)>>::m_value,
+	static_assert(std::is_convertible<F, std::function<U(T, U)>>::value,
 		"foldr requires a function type U(T, U)");
 	if (lst.isEmpty())
 		return acc;
@@ -105,7 +105,7 @@ U foldr(F f, U acc, List<T> lst)
 template<class T, class U, class F>
 U foldl(F f, U acc, List<T> lst)
 {
-	static_assert(std::is_convertible<F, std::function<U(U, T)>>::m_value,
+	static_assert(std::is_convertible<F, std::function<U(U, T)>>::value,
 		"foldl requires a function type U(U, T)");
 	if (lst.isEmpty())
 		return acc;
@@ -116,7 +116,7 @@ U foldl(F f, U acc, List<T> lst)
 template<class T, class F>
 void forEach(List<T> lst, F f)
 {
-	static_assert(std::is_convertible<F, std::function<void(T)>>::m_value,
+	static_assert(std::is_convertible<F, std::function<void(T)>>::value,
 		"forEach requires a function type void(T)");
 	if (!lst.isEmpty()) {
 		f(lst.front());
@@ -125,9 +125,9 @@ void forEach(List<T> lst, F f)
 }
 
 template<class Beg, class End>
-auto fromIt(Beg it, End end) -> List<typename Beg::m_value_type>
+auto fromIt(Beg it, End end) -> List<typename Beg::value_type>
 {
-	typedef typename Beg::m_value_type T;
+	typedef typename Beg::value_type T;
 	if (it == end)
 		return List<T>();
 	T item = *it;
