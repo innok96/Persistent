@@ -5,166 +5,132 @@
 #include <random>
 #include <chrono>
 #include <numeric>
+#include <cassert>
+#include <memory>
 
-const int kMax = 10000;
-
-struct Node 
+namespace
 {
 
+template<typename T>
+struct Node 
+{
 	Node() 
 	{
 		m_index = 0;
-		m_value = 0;
+		m_value = T{};
 		m_id = 0;
 		m_pLeft = m_pRight = nullptr;
 	}
 
-	Node(int i, int v, int u) 
+	Node(int index, T value, int id) 
 	{
-		m_index = i;
-		m_value = v;
-		m_id = u;
+		m_index = index;
+		m_value = value;
+		m_id = id;
 		m_pLeft = m_pRight = nullptr;
 	}
 
 
 	int m_index;
-	int m_value;
+	T m_value;
 	int m_id;
 
-	Node* m_pLeft;
-	Node* m_pRight;
+	std::shared_ptr<Node<T> > m_pLeft;
+	std::shared_ptr<Node<T> > m_pRight;
 };
 
-class PersistentArray 
+template<typename T>
+class PersistentArrayVersion
 {
 
 public:
-	PersistentArray() 
+	PersistentArrayVersion()
 	{
 		m_pRoot = nullptr;
-		m_isDetached = false;
 		m_size = 0;
 	}
 
-	PersistentArray(unsigned size) 
+	PersistentArrayVersion(int size)
 	{
 		m_size = size;
-		m_isDetached = true;
 		std::vector<int> aIndexes(m_size - 1);
 		std::iota(aIndexes.begin(), aIndexes.end(), 1);
 
-		// Randomize indices to raise the chances of having a balanced tree.
-		unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-		shuffle(aIndexes.begin(), aIndexes.end(), std::default_random_engine(seed));
+		random_shuffle(aIndexes.begin(), aIndexes.end());
 
-		// Create entries for all indices
-		m_pRoot = new Node;
+		m_pRoot = std::make_shared<Node<T> >();
 		for (const auto& index : aIndexes) 
 		{
-			m_pRoot = create(m_pRoot, index, 0);
+			create(m_pRoot, index, 0);
 		}
 	}
 
-	PersistentArray(const PersistentArray& other) 
+	PersistentArrayVersion(const PersistentArrayVersion& other)
 	{
 		this->m_size = other.m_size;
-		this->m_isDetached = false;
 		this->m_pRoot = other.m_pRoot;
 	}
 
-	PersistentArray& operator=(const PersistentArray& other) 
+	PersistentArrayVersion& operator=(const PersistentArrayVersion& other)
 	{
 		this->m_size = other.m_size;
-		this->m_isDetached = false;
 		this->m_pRoot = other.m_pRoot;
 		return *this;
 	}
 
-	void setValue(int index, int value) 
+	void setValue(int index, T value) 
 	{
-		if (!m_isDetached) 
-		{
-			m_pRoot = setAndDetach(m_pRoot, index, value);
-			m_isDetached = true;
-		}
-		else 
-		{
-			setValue(m_pRoot, index, value);
-		}
+		m_pRoot = setValue(m_pRoot, index, value);
 	}
 
-	int getValue(int index) 
+	T getValue(int index) 
 	{
 		return getValue(m_pRoot, index);
 	}
+
+	void print()
+	{
+		int deep = 0;
+		print(m_pRoot, deep);
+		std::cout << std::endl;
+		//std::cout << deep << std::endl;
+	}
 	
-	~PersistentArray() 
-	{
-		if (m_isDetached && m_pRoot != nullptr) 
-		{
-			clean(m_pRoot, m_pRoot->m_id);
-			delete m_pRoot;
-		}
-	}
-
 private:
-	unsigned m_size;
-	bool m_isDetached;
-	Node* m_pRoot;
+	using NodePtr = std::shared_ptr<Node<T> >;
 
-	Node* create(Node* pRoot, int index, int id) 
+	int m_size;
+	NodePtr m_pRoot;
+
+	void create(NodePtr& pRoot, int index, int id) 
 	{
 		if (pRoot == nullptr) 
 		{
-			return new Node(index, 0, id);
-		}
-
-		if (index < pRoot->m_index) 
-		{
-			pRoot->m_pLeft = create(pRoot->m_pLeft, index, id);
-		}
-		else 
-		{
-			pRoot->m_pRight = create(pRoot->m_pRight, index, id);
-		}
-		return pRoot;
-	}
-
-	void setValue(Node* pRoot, int index, int value) 
-	{
-		if (pRoot == nullptr) 
-		{
-			return;
-		}
-
-		if (index == pRoot->m_index) 
-		{
-			pRoot->m_value = value;
+			pRoot = std::make_shared<Node<T> >(index, T{}, id);
 			return;
 		}
 
 		if (index < pRoot->m_index) 
 		{
-			setValue(pRoot->m_pLeft, index, value);
+			create(pRoot->m_pLeft, index, id);
 		}
 		else 
 		{
-			setValue(pRoot->m_pRight, index, value);
+			create(pRoot->m_pRight, index, id);
 		}
 	}
 
-	Node* setAndDetach(Node* pRoot, int index, int value) 
+	NodePtr setValue(NodePtr& pRoot, int index, T value)
 	{
 		if (pRoot == nullptr) 
 		{
 			return pRoot;
 		}
 
-		Node* pNode = nullptr;
+		NodePtr pNode = nullptr;
 		if (index == pRoot->m_index) 
 		{
-			pNode = new Node(index, value, pRoot->m_id + 1);
+			pNode = std::make_shared<Node<T> >(index, value, pRoot->m_id + 1);
 			pNode->m_pLeft = pRoot->m_pLeft;
 			pNode->m_pRight = pRoot->m_pRight;
 			return pNode;
@@ -172,20 +138,20 @@ private:
 
 		if (index < pRoot->m_index) 
 		{
-			Node* pLeft = setAndDetach(pRoot->m_pLeft, index, value);
+			NodePtr pLeft = setValue(pRoot->m_pLeft, index, value);
 			if (pLeft != nullptr)
 			{
-				pNode = new Node(pRoot->m_index, pRoot->m_value, pLeft->m_id);
+				pNode = std::make_shared<Node<T> >(pRoot->m_index, pRoot->m_value, pLeft->m_id);
 				pNode->m_pLeft = pLeft;
 				pNode->m_pRight = pRoot->m_pRight;
 			}
 		}
 		else 
 		{
-			Node* pRight = setAndDetach(pRoot->m_pRight, index, value);
+			NodePtr pRight = setValue(pRoot->m_pRight, index, value);
 			if (pRight != nullptr)
 			{
-				pNode = new Node(pRoot->m_index, pRoot->m_value, pRight->m_id);
+				pNode = std::make_shared<Node<T> >(pRoot->m_index, pRoot->m_value, pRight->m_id);
 				pNode->m_pLeft = pRoot->m_pLeft;
 				pNode->m_pRight = pRight;
 			}
@@ -193,7 +159,7 @@ private:
 		return pNode;
 	}
 
-	int getValue(Node* pRoot, int index)
+	T getValue(const NodePtr& pRoot, int index)
 	{
 		if (pRoot == nullptr)
 		{
@@ -215,23 +181,83 @@ private:
 		}
 	}
 
-	void clean(Node* pRoot, int id)
+	void print(const NodePtr& pRoot, int& deep)
 	{
 		if (pRoot == nullptr)
+			return;
+
+		int deepLeft = 0, deepRight = 0;
+		print(pRoot->m_pLeft, deepLeft);
+		std::cout << pRoot->m_value << " ";
+		print(pRoot->m_pRight, deepRight);
+		deep = std::max(deepLeft, deepRight) + 1;
+	}
+};
+
+}
+
+template<typename T>
+class PersistentArray
+{
+public:
+
+	PersistentArray() {}
+
+	PersistentArray(int size)
+	{
+		m_size = size;
+		m_lastVer = m_curVer = 0;
+		PersistentArrayVersion<T> initVer(size);
+		m_versions.push_back(initVer);
+	}
+
+	void setValue(int index, T value)
+	{
+		if (index < 0 || index >= m_size)
 		{
+			assert(index >= 0 && index < m_size);
 			return;
 		}
 
-		if (pRoot->m_pLeft != nullptr && pRoot->m_pLeft->m_id == id)
+		PersistentArrayVersion<T> newVer(m_versions[m_curVer]);
+		newVer.setValue(index, value);
+		while (m_lastVer > m_curVer)
 		{
-			clean(pRoot->m_pLeft, id);
-			delete pRoot->m_pLeft;
+			m_versions.pop_back();
+			m_lastVer--;
 		}
 
-		if (pRoot->m_pRight && pRoot->m_pRight->m_id == id)
-		{
-			clean(pRoot->m_pRight, id);
-			delete pRoot->m_pRight;
-		}
+		m_versions.push_back(newVer);
+		m_lastVer = ++m_curVer;
 	}
+
+	T getValue(int index)
+	{
+		if (index < 0 || index >= m_size)
+		{
+			assert(index >= 0 && index < m_size);
+			return 0;
+		}
+		return m_versions[m_curVer].getValue(index);
+	}
+
+	void undo(int numIter = 1)
+	{
+		m_curVer = std::max(0, m_curVer - numIter);
+	}
+
+	void redo(int numIter = 1)
+	{
+		m_curVer = std::min(m_lastVer, m_curVer + numIter);
+	}
+
+	void print()
+	{
+		m_versions[m_curVer].print();
+	}
+
+private:
+	int m_size;
+	int m_lastVer, m_curVer;
+	std::vector<PersistentArrayVersion<T> >m_versions;
 };
