@@ -18,22 +18,19 @@ struct Node
 	{
 		m_index = 0;
 		m_value = T{};
-		m_id = 0;
 		m_pLeft = m_pRight = nullptr;
 	}
 
-	Node(int index, T value, int id) 
+	Node(int index, T value) 
 	{
 		m_index = index;
 		m_value = value;
-		m_id = id;
 		m_pLeft = m_pRight = nullptr;
 	}
 
 
 	int m_index;
 	T m_value;
-	int m_id;
 
 	std::shared_ptr<Node<T> > m_pLeft;
 	std::shared_ptr<Node<T> > m_pRight;
@@ -61,7 +58,7 @@ public:
 		m_pRoot = std::make_shared<Node<T> >();
 		for (const auto& index : aIndexes) 
 		{
-			create(m_pRoot, index, 0);
+			create(m_pRoot, index);
 		}
 	}
 
@@ -102,21 +99,21 @@ private:
 	int m_size;
 	NodePtr m_pRoot;
 
-	void create(NodePtr& pRoot, int index, int id) 
+	void create(NodePtr& pRoot, int index) 
 	{
 		if (pRoot == nullptr) 
 		{
-			pRoot = std::make_shared<Node<T> >(index, T{}, id);
+			pRoot = std::make_shared<Node<T> >(index, T{});
 			return;
 		}
 
 		if (index < pRoot->m_index) 
 		{
-			create(pRoot->m_pLeft, index, id);
+			create(pRoot->m_pLeft, index);
 		}
 		else 
 		{
-			create(pRoot->m_pRight, index, id);
+			create(pRoot->m_pRight, index);
 		}
 	}
 
@@ -130,7 +127,7 @@ private:
 		NodePtr pNode = nullptr;
 		if (index == pRoot->m_index) 
 		{
-			pNode = std::make_shared<Node<T> >(index, value, pRoot->m_id + 1);
+			pNode = std::make_shared<Node<T> >(index, value);
 			pNode->m_pLeft = pRoot->m_pLeft;
 			pNode->m_pRight = pRoot->m_pRight;
 			return pNode;
@@ -141,7 +138,7 @@ private:
 			NodePtr pLeft = setValue(pRoot->m_pLeft, index, value);
 			if (pLeft != nullptr)
 			{
-				pNode = std::make_shared<Node<T> >(pRoot->m_index, pRoot->m_value, pLeft->m_id);
+				pNode = std::make_shared<Node<T> >(pRoot->m_index, pRoot->m_value);
 				pNode->m_pLeft = pLeft;
 				pNode->m_pRight = pRoot->m_pRight;
 			}
@@ -151,7 +148,7 @@ private:
 			NodePtr pRight = setValue(pRoot->m_pRight, index, value);
 			if (pRight != nullptr)
 			{
-				pNode = std::make_shared<Node<T> >(pRoot->m_index, pRoot->m_value, pRight->m_id);
+				pNode = std::make_shared<Node<T> >(pRoot->m_index, pRoot->m_value);
 				pNode->m_pLeft = pRoot->m_pLeft;
 				pNode->m_pRight = pRight;
 			}
