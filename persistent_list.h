@@ -61,6 +61,8 @@ public:
 	std::shared_ptr<Node<T> > getLeft(int version)
 	{
 		assert(version >= m_first.m_version);
+		if (version < m_first.m_version)
+			return nullptr;
 
 		if (m_isFull && m_second.m_version <= version)
 			return m_second.m_pLeft;
@@ -71,6 +73,8 @@ public:
 	std::shared_ptr<Node<T> > getRight(int version)
 	{
 		assert(version >= m_first.m_version);
+		if (version < m_first.m_version)
+			return nullptr;
 
 		if (m_isFull && m_second.m_version <= version)
 			return m_second.m_pRight;
@@ -97,6 +101,8 @@ public:
 	void setVal(const T& value, int version)
 	{
 		assert(version >= m_first.m_version);
+		if (version < m_first.m_version)
+			return;
 
 		if (m_isFull && m_second.m_version <= version)
 			m_second.m_value = value;
@@ -107,6 +113,8 @@ public:
 	T getVal(int version)
 	{
 		assert(version >= m_first.m_version);
+		if (version < m_first.m_version)
+			throw std::exception();
 
 		if (m_isFull && m_second.m_version <= version)
 			return m_second.m_value;
@@ -208,6 +216,8 @@ public:
 	void next()
 	{
 		assert(m_pItem != nullptr);
+		if (m_pItem == nullptr)
+			throw std::exception();
 
 		m_pItem = m_pItem->getRight(m_version);
 	}
@@ -215,6 +225,8 @@ public:
 	void prev()
 	{
 		assert(m_pItem != nullptr);
+		if (m_pItem == nullptr)
+			throw std::exception();
 
 		m_pItem = m_pItem->getLeft(m_version);
 	}
@@ -222,6 +234,8 @@ public:
 	bool done()
 	{
 		assert(m_pItem != nullptr);
+		if (m_pItem == nullptr)
+			throw std::exception();
 
 		return m_pItem->getRight(m_version) == nullptr;
 	}
@@ -229,6 +243,8 @@ public:
 	void setVal(const T& val)
 	{
 		assert(m_pItem != nullptr);
+		if (m_pItem == nullptr)
+			throw std::exception();
 
 		m_pInvalidator->invalidate(m_version);
 		
@@ -307,6 +323,8 @@ public:
 	T getVal()
 	{
 		assert(m_pItem != nullptr && m_pItem->getRight(m_version) != nullptr);
+		if (m_pItem == nullptr || m_pItem->getRight(m_version) == nullptr)
+			throw std::exception();
 
 		return m_pItem->getVal(m_version);
 	}
@@ -377,6 +395,8 @@ public:
 	PersistentListIteratorPtr insert(PersistentListIteratorPtr& pIter, T val)
 	{
 		assert(pIter != nullptr);
+		if (pIter == nullptr)
+			throw std::exception();
 
 		m_pInvalidator->invalidate(m_version);
 
@@ -451,6 +471,8 @@ public:
 	PersistentListIteratorPtr erase(PersistentListIteratorPtr& pIter)
 	{
 		assert(pIter != nullptr && pIter->m_pItem->getRight(m_version) != nullptr);
+		if (pIter == nullptr && pIter->m_pItem->getRight(m_version) != nullptr)
+			throw std::exception();
 
 		m_pInvalidator->invalidate(m_version);
 
