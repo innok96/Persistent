@@ -5,11 +5,14 @@
 #include <memory>
 #include <vector>
 
+namespace
+{
+
 template<typename T>
 class PersistentListInvalidator;
 
 template<typename T>
-class Node;
+class ListNode;
 
 template<typename T>
 struct NodeVersion
@@ -30,17 +33,17 @@ struct NodeVersion
 
 	int m_version;
 	T m_value;
-	std::shared_ptr<Node<T> > m_pLeft;
-	std::shared_ptr<Node<T> > m_pRight;
+	std::shared_ptr<ListNode<T> > m_pLeft;
+	std::shared_ptr<ListNode<T> > m_pRight;
 };
 
 template<typename T>
-class Node
+class ListNode
 {
 public:
-	Node() = default;
+	ListNode() = default;
 
-	Node(const T& value, int version) :
+	ListNode(const T& value, int version) :
 		m_first(value, version),
 		m_second()
 	{}
@@ -58,7 +61,7 @@ public:
 		m_isFull = true;
 	}
 
-	std::shared_ptr<Node<T> > getLeft(int version)
+	std::shared_ptr<ListNode<T> > getLeft(int version)
 	{
 		assert(version >= m_first.m_version);
 		if (version < m_first.m_version)
@@ -70,7 +73,7 @@ public:
 			return m_first.m_pLeft;
 	}
 
-	std::shared_ptr<Node<T> > getRight(int version)
+	std::shared_ptr<ListNode<T> > getRight(int version)
 	{
 		assert(version >= m_first.m_version);
 		if (version < m_first.m_version)
@@ -82,7 +85,7 @@ public:
 			return m_first.m_pRight;
 	}
 
-	void setLeft(std::shared_ptr<Node<T> > pLeft, bool isFirst = true)
+	void setLeft(std::shared_ptr<ListNode<T> > pLeft, bool isFirst = true)
 	{
 		if (isFirst)
 			m_first.m_pLeft = pLeft;
@@ -90,7 +93,7 @@ public:
 			m_second.m_pLeft = pLeft;
 	}
 
-	void setRight(std::shared_ptr<Node<T> > pRight, bool isFirst = true)
+	void setRight(std::shared_ptr<ListNode<T> > pRight, bool isFirst = true)
 	{
 		if (isFirst)
 			m_first.m_pRight = pRight;
@@ -158,7 +161,7 @@ template<typename T>
 class PersistentListInvalidator
 {
 public:
-	using NodePtr = std::shared_ptr<Node<T> >;
+	using NodePtr = std::shared_ptr<ListNode<T> >;
 
 	PersistentListInvalidator(std::vector<NodePtr>& apHeads, std::vector<NodePtr>& apTails) :
 		m_apHeads(apHeads),
@@ -205,6 +208,8 @@ private:
 	std::vector<NodePtr>& m_apTails;
 	std::vector<NodePtr> m_apNodes;
 };
+
+}
 
 template<typename T>
 class PersistentList;
@@ -255,7 +260,7 @@ public:
 		}
 		else
 		{
-			auto pNode = std::make_shared<Node<T> >(val, m_version + 1);
+			auto pNode = std::make_shared<ListNode<T> >(val, m_version + 1);
 			auto pPrev = pNode;
 
 			if (m_pItem->getLeft(m_version) == nullptr)
@@ -267,7 +272,7 @@ public:
 			{
 				if (pLeft->isFull())
 				{
-					auto pCopy = std::make_shared<Node<T> >(pLeft->getVal(m_version), m_version + 1);
+					auto pCopy = std::make_shared<ListNode<T> >(pLeft->getVal(m_version), m_version + 1);
 					pPrev->setLeft(pCopy);
 					pCopy->setRight(pPrev);
 					m_pInvalidator->add(pCopy);
@@ -293,7 +298,7 @@ public:
 			{
 				if (pRight->isFull())
 				{
-					auto pCopy = std::make_shared<Node<T> >(pRight->getVal(m_version), m_version + 1);
+					auto pCopy = std::make_shared<ListNode<T> >(pRight->getVal(m_version), m_version + 1);
 					pPrev->setRight(pCopy);
 					pCopy->setLeft(pPrev);
 					m_pInvalidator->add(pCopy);
@@ -330,7 +335,7 @@ public:
 	}
 
 private:
-	using NodePtr = std::shared_ptr<Node<T> >;
+	using NodePtr = std::shared_ptr<ListNode<T> >;
 	friend class PersistentList<T>;
 
 	PersistentListIterator(const NodePtr& pNode, int& version, int& lastVer, std::shared_ptr<PersistentListInvalidator<T> > pInvalidator):
@@ -355,7 +360,7 @@ public:
 
 	PersistentList()
 	{
-		m_apHeads.push_back(std::make_shared<Node<T> >());
+		m_apHeads.push_back(std::make_shared<ListNode<T> >());
 		m_apTails = m_apHeads;
 		m_pInvalidator = std::make_shared<PersistentListInvalidator<T> >(m_apHeads, m_apTails);
 	}
@@ -400,7 +405,7 @@ public:
 
 		m_pInvalidator->invalidate(m_version);
 
-		auto pNode = std::make_shared<Node<T> >(val, m_version + 1);
+		auto pNode = std::make_shared<ListNode<T> >(val, m_version + 1);
 		m_pInvalidator->add(pNode);
 
 		if (pIter->m_pItem->getLeft(m_version) == nullptr)
@@ -413,7 +418,7 @@ public:
 		{
 			if (pLeft->isFull())
 			{
-				auto pCopy = std::make_shared<Node<T> >(pLeft->getVal(m_version), m_version + 1);
+				auto pCopy = std::make_shared<ListNode<T> >(pLeft->getVal(m_version), m_version + 1);
 				pPrev->setLeft(pCopy);
 				pCopy->setRight(pPrev);
 				m_pInvalidator->add(pCopy);
@@ -439,7 +444,7 @@ public:
 		{
 			if (pRight->isFull())
 			{
-				auto pCopy = std::make_shared<Node<T> >(pRight->getVal(m_version), m_version + 1);
+				auto pCopy = std::make_shared<ListNode<T> >(pRight->getVal(m_version), m_version + 1);
 				pPrev->setRight(pCopy);
 				pCopy->setLeft(pPrev);
 				m_pInvalidator->add(pCopy);
@@ -490,7 +495,7 @@ public:
 			}
 			else
 			{
-				pLeftClonedNode = std::make_shared<Node<T> >(pLeftNode->getVal(m_version), m_version + 1);
+				pLeftClonedNode = std::make_shared<ListNode<T> >(pLeftNode->getVal(m_version), m_version + 1);
 				m_pInvalidator->add(pLeftClonedNode);
 				if (pLeftNode->getLeft(m_version) == nullptr)
 				{
@@ -502,7 +507,7 @@ public:
 				{
 					if (pLeft->isFull())
 					{
-						auto pCopy = std::make_shared<Node<T> >(pLeft->getVal(m_version), m_version + 1);
+						auto pCopy = std::make_shared<ListNode<T> >(pLeft->getVal(m_version), m_version + 1);
 						pPrev->setLeft(pCopy);
 						pCopy->setRight(pPrev);
 						m_pInvalidator->add(pCopy);
@@ -537,7 +542,7 @@ public:
 		}
 		else
 		{
-			pRightClonedNode = std::make_shared<Node<T> >(pRightNode->getVal(m_version), m_version + 1);
+			pRightClonedNode = std::make_shared<ListNode<T> >(pRightNode->getVal(m_version), m_version + 1);
 			m_pInvalidator->add(pRightClonedNode);
 			if (pLeftNode == nullptr)
 			{
@@ -549,7 +554,7 @@ public:
 			{
 				if (pRight->isFull())
 				{
-					auto pCopy = std::make_shared<Node<T> >(pRight->getVal(m_version), m_version + 1);
+					auto pCopy = std::make_shared<ListNode<T> >(pRight->getVal(m_version), m_version + 1);
 					pPrev->setRight(pCopy);
 					pCopy->setLeft(pPrev);
 					m_pInvalidator->add(pCopy);
@@ -632,7 +637,7 @@ public:
 	}
 
 private:
-	using NodePtr = std::shared_ptr<Node<T> >;
+	using NodePtr = std::shared_ptr<ListNode<T> >;
 	
 	int m_version = 0, m_lastVer = 0;
 	std::vector<NodePtr> m_apHeads;
