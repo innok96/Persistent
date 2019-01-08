@@ -1,3 +1,4 @@
+#include "persistent_container.h"
 #include <cassert>
 #include <functional>
 #include <iostream>
@@ -218,6 +219,9 @@ template<typename T>
 class PersistentListIterator
 {
 public:
+	/*
+	* Sets the iterator to the next position
+	*/
 	void next()
 	{
 		assert(m_pItem != nullptr);
@@ -227,6 +231,9 @@ public:
 		m_pItem = m_pItem->getRight(m_version);
 	}
 
+	/*
+	* Sets the iterator to the previous position
+	*/
 	void prev()
 	{
 		assert(m_pItem != nullptr);
@@ -236,6 +243,10 @@ public:
 		m_pItem = m_pItem->getLeft(m_version);
 	}
 
+	/*
+	* Checks if iterator is at the end, throws exception if invalid
+	* @return false, if at the end, true otherwise
+	*/
 	bool done()
 	{
 		assert(m_pItem != nullptr);
@@ -245,6 +256,10 @@ public:
 		return m_pItem->getRight(m_version) == nullptr;
 	}
 
+	/**
+	* Sets value to the element which iterator points to
+	* @param value
+	*/
 	void setVal(const T& val)
 	{
 		assert(m_pItem != nullptr);
@@ -325,6 +340,10 @@ public:
 		m_lastVer = ++m_version;
 	}
 
+	/**
+	* Gets value of the element which iterator points to
+	* @param value
+	*/
 	T getVal()
 	{
 		assert(m_pItem != nullptr && m_pItem->getRight(m_version) != nullptr);
@@ -352,7 +371,7 @@ private:
 };
 
 template<typename T>
-class PersistentList
+class PersistentList : public PersistentBase
 {
 public:
 	friend class PersistentListIterator<T>;
@@ -365,6 +384,10 @@ public:
 		m_pInvalidator = std::make_shared<PersistentListInvalidator<T> >(m_apHeads, m_apTails);
 	}
 
+	/**
+	* Gets new itarator to the beginning of the list
+	* @return iterator to the beginning
+	*/
 	PersistentListIteratorPtr begin()
 	{
 		int ind = 0;
@@ -381,6 +404,10 @@ public:
 		return pBegin;
 	}
 
+	/**
+	* Gets new itarator to the end of the list
+	* @return iterator to the end
+	*/
 	PersistentListIteratorPtr end()
 	{
 		int ind = 0;
@@ -397,6 +424,11 @@ public:
 		return pEnd;
 	}
 
+	/**
+	* Inserts new element to the position, which itarator points to, throws exception if iterator is invalid
+	* @param pIter - poiner to the iterator
+	* @param val - value of element
+	*/
 	PersistentListIteratorPtr insert(PersistentListIteratorPtr& pIter, T val)
 	{
 		assert(pIter != nullptr);
@@ -473,6 +505,11 @@ public:
 		return pNewIter;
 	}
 
+	/**
+	* Erases element which iterator points to, throws exception if iterator is invalid or points to the end
+	* @param key
+	* @return true, if element is successfully deleted
+	*/
 	PersistentListIteratorPtr erase(PersistentListIteratorPtr& pIter)
 	{
 		assert(pIter != nullptr && pIter->m_pItem->getRight(m_version) != nullptr);
@@ -617,6 +654,9 @@ public:
 			return std::shared_ptr<PersistentListIterator<T> >(new PersistentListIterator<T>(pRightNode, m_version, m_lastVer, m_pInvalidator));
 	}
 
+	/**
+	* Prints elements of the list
+	*/
 	void print()
 	{
 		for (auto pIter = begin(); !pIter->done(); pIter->next())
@@ -626,14 +666,31 @@ public:
 		puts("");
 	}
 
-	void undo(int numIter = 1)
+	/**
+	* Undo last numIter operations of 'set', 'insert', 'erase' types
+	* @param numIter
+	*/
+	void undo(int numIter = 1) override
 	{
 		m_version = std::max(0, m_version - numIter);
 	}
 
+	/**
+	* Reapplies last cancelled numIter operations of 'set', 'insert', 'erase' types
+	* @param numIter
+	*/
 	void redo(int numIter = 1)
 	{
 		m_version = std::min(m_lastVer, m_version + numIter);
+	}
+
+	/*
+	* Gets number of versions of the array
+	* @return number of versions
+	*/
+	int lastVersion() override
+	{
+		return m_lastVer + 1;
 	}
 
 private:

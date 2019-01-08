@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "persistent_container.h"
 #include <vector>
 #include <algorithm>
 #include <ctime>
@@ -194,7 +194,7 @@ private:
 }
 
 template<typename T>
-class PersistentArray
+class PersistentArray : public PersistentBase
 {
 public:
 
@@ -208,6 +208,11 @@ public:
 		m_versions.push_back(initVer);
 	}
 
+	/**
+	* Sets value to element with index
+	* @param index - index of element
+	* @param value
+	*/
 	void setValue(int index, T value)
 	{
 		if (index < 0 || index >= m_size)
@@ -228,29 +233,55 @@ public:
 		m_lastVer = ++m_curVer;
 	}
 
+	/**
+	* Gets value of element with index, throws exception if index is invalid
+	* @param index - index of element
+	* @return found element
+	*/
 	T getValue(int index)
 	{
 		if (index < 0 || index >= m_size)
 		{
 			assert(index >= 0 && index < m_size);
-			return 0;
+			throw std::exception();
 		}
+
 		return m_versions[m_curVer].getValue(index);
 	}
 
-	void undo(int numIter = 1)
+	/**
+	* Undo last numIter operations of 'set' type
+	* @param numIter
+	*/
+	void undo(int numIter = 1) override
 	{
 		m_curVer = std::max(0, m_curVer - numIter);
 	}
 
+	/**
+	* Reapplies last cancelled numIter operations of 'set', 'insert', 'erase' types
+	* @param numIter
+	*/
 	void redo(int numIter = 1)
 	{
 		m_curVer = std::min(m_lastVer, m_curVer + numIter);
 	}
 
+	/**
+	* Prints elements of array
+	*/
 	void print()
 	{
 		m_versions[m_curVer].print();
+	}
+
+	/*
+	* Gets number of versions of the array
+	* @return number of versions
+	*/
+	int lastVersion() override
+	{
+		return m_lastVer + 1;
 	}
 
 private:

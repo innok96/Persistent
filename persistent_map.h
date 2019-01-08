@@ -1,3 +1,4 @@
+#include "persistent_container.h"
 #include <cmath>
 #include <random> 
 #include <iostream>
@@ -176,10 +177,10 @@ private:
 		{
 			if (pNewRoot->m_pRight != nullptr)
 			{
-				auto pChild = pNewRoot->m_pRight->split(key, pNewRoot->m_pRight, pRight);
-				if(pChild != nullptr)
-					pNewRoot->m_pRight = pChild;
+				pNewRoot->m_pRight->split(key, pNewRoot->m_pRight, pRight);
 			}
+			else
+				pRight = nullptr;
 
 			pLeft = pNewRoot;
 		}
@@ -187,10 +188,10 @@ private:
 		{
 			if (pNewRoot->m_pLeft != nullptr)
 			{
-				auto pChild = pNewRoot->m_pLeft->split(key, pLeft, pNewRoot->m_pLeft);
-				if (pChild != nullptr)
-					pNewRoot->m_pLeft = pChild;
+				pNewRoot->m_pLeft->split(key, pLeft, pNewRoot->m_pLeft);
 			}
+			else
+				pLeft = nullptr;
 
 			pRight = pNewRoot;
 		}
@@ -242,7 +243,7 @@ public:
 			return m_pRoot->erase(key);
 		}
 
-		return m_pRoot;
+		return nullptr;
 	}
 
 	TreapNodePtr insert(const KeyType& key, const ValueType& value)
@@ -268,9 +269,10 @@ public:
 
 	TreapNodePtr setValue(const KeyType& key, const ValueType& value)
 	{
-		assert(m_pRoot != nullptr);
 		if (m_pRoot == nullptr)
-			throw std::exception();
+		{
+			return std::make_shared<TreapNode<KeyType, ValueType> >(key, value);
+		}
 
 		auto pNewRoot = m_pRoot->setValue(key, value);
 		if (pNewRoot == nullptr)
@@ -296,7 +298,7 @@ private:
 }
 
 template<typename KeyType, typename ValueType>
-class PersistentMap
+class PersistentMap : public PersistentBase
 {
 public:
 	PersistentMap() :
@@ -306,6 +308,11 @@ public:
 		m_versions.push_back(TreapVersion<KeyType, ValueType>());
 	}
 
+	/**
+	* Sets value to key, if key doesn't exist, inserts new key with value
+	* @param key
+	* @param value
+	*/
 	void setValue(const KeyType& key, const ValueType& value)
 	{
 		invalidate();
@@ -313,11 +320,22 @@ public:
 		m_lastVersion = ++m_curVersion;
 	}
 
+	/**
+	* Finds key in the map
+	* @param key
+	* @param value - found value
+	* @return true, if found
+	*/
 	bool find(const KeyType& key, ValueType& value)
 	{
 		return m_versions[m_curVersion].find(key, value);
 	}
 
+	/**
+	* Inserts key and value into map, if key exists, sets new value to key
+	* @param key
+	* @param value
+	*/
 	void insert(const KeyType& key, const ValueType& value)
 	{
 		invalidate();
@@ -325,22 +343,59 @@ public:
 		m_lastVersion = ++m_curVersion;
 	}
 
-	void erase(const KeyType& key)
+	/**
+	* Erases element with given key
+	* @param key
+	* @return true, if element is successfully deleted
+	*/
+	bool erase(const KeyType& key)
 	{
 		invalidate();
-		m_versions.push_back(m_versions.back().erase(key));
+		auto pNewRoot = m_versions.back().erase(key);
+		if (pNewRoot == nullptr)
+			return false;
+
+		m_versions.push_back(pNewRoot);
 		m_lastVersion = ++m_curVersion;
+		return true;
 	}
 
-	void undo(int numIter = 1)
+	/**
+	* Undo last numIter operations of 'set', 'insert', 'erase' types
+	* @param numIter
+	*/
+	void undo(int numIter = 1) override
 	{
 		m_curVersion = std::max(0, m_curVersion - numIter);
 	}
 
+	/**
+	* Reapplies last cancelled numIter operations of 'set', 'insert', 'erase' types
+	* @param numIter
+	*/
 	void redo(int numIter = 1)
 	{
 		m_curVersion = std::min(m_lastVersion, m_curVersion + numIter);
 	}
+
+	/**
+	* Prints keys and values of elements of map in ascending order
+	*/
+	void print()
+	{
+		m_versions[m_curVersion].print();
+	}
+
+	/*
+	* Gets number of versions of the map
+	* @return number of versions
+	*/
+	int lastVersion() override
+	{
+		return m_lastVersion + 1;
+	}
+
+private:
 
 	void invalidate()
 	{
@@ -351,12 +406,6 @@ public:
 		}
 	}
 
-	void print()
-	{
-		m_versions[m_curVersion].print();
-	}
-
-private:
 	std::vector<TreapVersion<KeyType, ValueType> >m_versions;
 	int m_lastVersion, m_curVersion;
 };
