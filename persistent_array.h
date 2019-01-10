@@ -203,7 +203,7 @@ public:
 	PersistentArray(int size)
 	{
 		m_size = size;
-		m_lastVer = m_curVer = 0;
+		m_lastVersion = m_curVersion = 0;
 		PersistentArrayVersion<T> initVer(size);
 		m_versions.push_back(initVer);
 	}
@@ -221,16 +221,16 @@ public:
 			return;
 		}
 
-		PersistentArrayVersion<T> newVer(m_versions[m_curVer]);
+		PersistentArrayVersion<T> newVer(m_versions[m_curVersion]);
 		newVer.setValue(index, value);
-		while (m_lastVer > m_curVer)
+		while (m_lastVersion > m_curVersion)
 		{
 			m_versions.pop_back();
-			m_lastVer--;
+			m_lastVersion--;
 		}
 
 		m_versions.push_back(newVer);
-		m_lastVer = ++m_curVer;
+		m_lastVersion = ++m_curVersion;
 	}
 
 	/**
@@ -246,16 +246,24 @@ public:
 			throw std::exception();
 		}
 
-		return m_versions[m_curVer].getValue(index);
+		return m_versions[m_curVersion].getValue(index);
 	}
 
 	/**
 	* Undo last numIter operations of 'set' type
 	* @param numIter
 	*/
-	void undo(int numIter = 1) override
+	void undo(int numIter = 1, bool clearHistory = false) override
 	{
-		m_curVer = std::max(0, m_curVer - numIter);
+		m_curVersion = std::max(0, m_curVersion - numIter);
+		if (clearHistory)
+		{
+			while (m_lastVersion > m_curVersion)
+			{
+				m_versions.pop_back();
+				m_lastVersion--;
+			}
+		}
 	}
 
 	/**
@@ -264,7 +272,7 @@ public:
 	*/
 	void redo(int numIter = 1)
 	{
-		m_curVer = std::min(m_lastVer, m_curVer + numIter);
+		m_curVersion = std::min(m_lastVersion, m_curVersion + numIter);
 	}
 
 	/**
@@ -272,7 +280,7 @@ public:
 	*/
 	void print()
 	{
-		m_versions[m_curVer].print();
+		m_versions[m_curVersion].print();
 	}
 
 	/*
@@ -281,11 +289,11 @@ public:
 	*/
 	int lastVersion() override
 	{
-		return m_lastVer + 1;
+		return m_lastVersion + 1;
 	}
 
 private:
 	int m_size;
-	int m_lastVer, m_curVer;
+	int m_lastVersion, m_curVersion;
 	std::vector<PersistentArrayVersion<T> >m_versions;
 };

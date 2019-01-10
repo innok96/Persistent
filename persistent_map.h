@@ -231,8 +231,9 @@ public:
 		return true;
 	}
 
-	TreapNodePtr erase(const KeyType& key)
+	TreapNodePtr erase(const KeyType& key, bool& isSuccess)
 	{
+		isSuccess = false;
 		assert(m_pRoot != nullptr);
 		if (m_pRoot == nullptr)
 			throw std::exception();
@@ -240,6 +241,7 @@ public:
 		TreapNodePtr curTreapNode = m_pRoot->find(key);
 		if (curTreapNode != nullptr)
 		{
+			isSuccess = true;
 			return m_pRoot->erase(key);
 		}
 
@@ -351,8 +353,9 @@ public:
 	bool erase(const KeyType& key)
 	{
 		invalidate();
-		auto pNewRoot = m_versions.back().erase(key);
-		if (pNewRoot == nullptr)
+		bool isSuccess = false;
+		auto pNewRoot = m_versions.back().erase(key, isSuccess);
+		if (!isSuccess)
 			return false;
 
 		m_versions.push_back(pNewRoot);
@@ -364,9 +367,17 @@ public:
 	* Undo last numIter operations of 'set', 'insert', 'erase' types
 	* @param numIter
 	*/
-	void undo(int numIter = 1) override
+	void undo(int numIter = 1, bool clearHistory = false) override
 	{
 		m_curVersion = std::max(0, m_curVersion - numIter);
+		if (clearHistory)
+		{
+			while (m_lastVersion > m_curVersion)
+			{
+				m_versions.pop_back();
+				m_lastVersion--;
+			}
+		}
 	}
 
 	/**
