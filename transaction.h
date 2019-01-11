@@ -40,7 +40,7 @@ public:
 	{
 		if (!m_isSucceeded)
 		{
-			for (int i = 0; i < m_versions.size(); i++)
+			for (int i = 0; i < (int)m_versions.size(); i++)
 			{
 				m_apContainers[i]->undo(m_apContainers[i]->lastVersion() - m_versions[i], true);
 

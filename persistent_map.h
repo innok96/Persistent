@@ -6,296 +6,296 @@
 namespace
 {
 
-template<typename KeyType, typename ValueType>
-class TreapNode : public std::enable_shared_from_this<TreapNode<KeyType, ValueType> >
-{
-public:
-	using TreapNodePtr = std::shared_ptr<TreapNode<KeyType, ValueType> >;
-	using super = std::enable_shared_from_this<TreapNode<KeyType, ValueType> >;
-
-	TreapNode(const KeyType& key, const ValueType& value, int priority = rand())	:
-		m_key(key), 
-		m_value(value), 
-		m_priority(priority)
-	{}
-
-	ValueType value() const
+	template<typename KeyType, typename ValueType>
+	class TreapNode : public std::enable_shared_from_this<TreapNode<KeyType, ValueType> >
 	{
-		return m_value;
-	}
+	public:
+		using TreapNodePtr = std::shared_ptr<TreapNode<KeyType, ValueType> >;
+		using super = std::enable_shared_from_this<TreapNode<KeyType, ValueType> >;
 
-	TreapNodePtr find(const KeyType& key)
-	{
-		if (m_key == key)
+		TreapNode(const KeyType& key, const ValueType& value, int priority = rand()) :
+			m_key(key),
+			m_value(value),
+			m_priority(priority)
+		{}
+
+		ValueType value() const
 		{
+			return m_value;
+		}
+
+		TreapNodePtr find(const KeyType& key)
+		{
+			if (m_key == key)
+			{
+				return super::shared_from_this();
+			}
+			if (m_key < key)
+			{
+				if (m_pRight == nullptr)
+					return nullptr;
+
+				return m_pRight->find(key);
+			}
+			else
+			{
+				if (m_pLeft == nullptr)
+					return nullptr;
+
+				return m_pLeft->find(key);
+			}
 			return super::shared_from_this();
 		}
-		if (m_key < key)
-		{
-			if (m_pRight == nullptr)
-				return nullptr;
 
-			return m_pRight->find(key);
+		TreapNodePtr insert(const KeyType& key, const ValueType& value)
+		{
+			TreapNodePtr pNode = std::make_shared<TreapNode<KeyType, ValueType> >(key, value), pLeft, pRight;
+			split(key, pLeft, pRight);
+
+			pLeft = merge(pLeft, pNode);
+			return merge(pLeft, pRight);
 		}
-		else
-		{
-			if (m_pLeft == nullptr)
-				return nullptr;
-			
-			return m_pLeft->find(key);
-		}
-		return super::shared_from_this();
-	}
 
-	TreapNodePtr insert(const KeyType& key, const ValueType& value)
-	{
-		TreapNodePtr pNode = std::make_shared<TreapNode<KeyType, ValueType> >(key, value), pLeft, pRight;
-		split(key, pLeft, pRight);
-		
-		pLeft = merge(pLeft, pNode);
-		return merge(pLeft, pRight);
-	}
-
-	TreapNodePtr erase(const KeyType& key)
-	{
-		TreapNodePtr pNode;
-		if (key == m_key)
+		TreapNodePtr erase(const KeyType& key)
 		{
-			return merge(m_pLeft, m_pRight);
-		}
-		else
-		{
-			pNode = std::make_shared<TreapNode<KeyType, ValueType> >(m_key, m_value, m_priority);
-			pNode->m_pLeft = m_pLeft;
-			pNode->m_pRight = m_pRight;
-
-			if (key < m_key)
-				pNode->m_pLeft = pNode->m_pLeft->erase(key);
+			TreapNodePtr pNode;
+			if (key == m_key)
+			{
+				return merge(m_pLeft, m_pRight);
+			}
 			else
-				pNode->m_pRight = pNode->m_pRight->erase(key);
-		}
+			{
+				pNode = std::make_shared<TreapNode<KeyType, ValueType> >(m_key, m_value, m_priority);
+				pNode->m_pLeft = m_pLeft;
+				pNode->m_pRight = m_pRight;
 
-		return pNode;
-	}
+				if (key < m_key)
+					pNode->m_pLeft = pNode->m_pLeft->erase(key);
+				else
+					pNode->m_pRight = pNode->m_pRight->erase(key);
+			}
 
-	TreapNodePtr setValue(const KeyType& key, const ValueType& value)
-	{
-		TreapNodePtr pNode;
-		if (key == m_key)
-		{
-			pNode = std::make_shared<TreapNode<KeyType, ValueType> >(key, value, m_priority);
-			pNode->m_pLeft = m_pLeft;
-			pNode->m_pRight = m_pRight;
 			return pNode;
 		}
 
-		if (key < m_key)
+		TreapNodePtr setValue(const KeyType& key, const ValueType& value)
 		{
-			TreapNodePtr pLeft = m_pLeft == nullptr ? m_pLeft : m_pLeft->setValue(key, value);
-			if (pLeft != nullptr)
+			TreapNodePtr pNode;
+			if (key == m_key)
 			{
-				pNode = std::make_shared<TreapNode<KeyType, ValueType> >(m_key, m_value);
-				pNode->m_pLeft = pLeft;
-				pNode->m_pRight = m_pRight;
-			}
-		}
-		else
-		{
-			TreapNodePtr pRight = m_pRight == nullptr ? m_pRight : m_pRight->setValue(key, value);
-			if (pRight != nullptr)
-			{
-				pNode = std::make_shared<TreapNode<KeyType, ValueType> >(m_key, m_value);
+				pNode = std::make_shared<TreapNode<KeyType, ValueType> >(key, value, m_priority);
 				pNode->m_pLeft = m_pLeft;
-				pNode->m_pRight = pRight;
+				pNode->m_pRight = m_pRight;
+				return pNode;
 			}
-		}
-		return pNode;
-	}
 
-	void print()
-	{
-		if(m_pLeft != nullptr)
-			m_pLeft->print();
-		std::cout << "(" << m_key << "; " << m_value << ")  ";
-		if (m_pRight != nullptr)
-			m_pRight->print();
-	}
-
-private:
-	TreapNodePtr merge(TreapNodePtr pLeft, TreapNodePtr pRight)
-	{
-		if (pLeft == nullptr && pRight == nullptr)
-			return nullptr;
-
-		TreapNodePtr pNewRoot;
-		if (pLeft != nullptr && pRight != nullptr)
-		{
-			if (pLeft->m_priority <= pRight->m_priority)
+			if (key < m_key)
 			{
-				pNewRoot = std::make_shared<TreapNode<KeyType, ValueType> >(pRight->m_key, pRight->m_value, pRight->m_priority);
-				pNewRoot->m_pLeft = pRight->m_pLeft;
-				pNewRoot->m_pRight = pRight->m_pRight;
-				pNewRoot->m_pLeft = merge(pLeft, pRight->m_pLeft);
+				TreapNodePtr pLeft = m_pLeft == nullptr ? m_pLeft : m_pLeft->setValue(key, value);
+				if (pLeft != nullptr)
+				{
+					pNode = std::make_shared<TreapNode<KeyType, ValueType> >(m_key, m_value);
+					pNode->m_pLeft = pLeft;
+					pNode->m_pRight = m_pRight;
+				}
 			}
 			else
 			{
-				pNewRoot = std::make_shared<TreapNode<KeyType, ValueType> >(pLeft->m_key, pLeft->m_value, pLeft->m_priority);
-				pNewRoot->m_pLeft = pLeft->m_pLeft;
-				pNewRoot->m_pRight = pLeft->m_pRight;
-				pNewRoot->m_pRight = merge(pLeft->m_pRight, pRight);
+				TreapNodePtr pRight = m_pRight == nullptr ? m_pRight : m_pRight->setValue(key, value);
+				if (pRight != nullptr)
+				{
+					pNode = std::make_shared<TreapNode<KeyType, ValueType> >(m_key, m_value);
+					pNode->m_pLeft = m_pLeft;
+					pNode->m_pRight = pRight;
+				}
 			}
+			return pNode;
 		}
-		else
+
+		void print()
 		{
-			if (pLeft == nullptr)
+			if (m_pLeft != nullptr)
+				m_pLeft->print();
+			std::cout << "(" << m_key << "; " << m_value << ")  ";
+			if (m_pRight != nullptr)
+				m_pRight->print();
+		}
+
+	private:
+		TreapNodePtr merge(TreapNodePtr pLeft, TreapNodePtr pRight)
+		{
+			if (pLeft == nullptr && pRight == nullptr)
+				return nullptr;
+
+			TreapNodePtr pNewRoot;
+			if (pLeft != nullptr && pRight != nullptr)
 			{
-				pNewRoot = std::make_shared<TreapNode<KeyType, ValueType> >(pRight->m_key, pRight->m_value, pRight->m_priority);
-				pNewRoot->m_pLeft = pRight->m_pLeft;
-				pNewRoot->m_pRight = pRight->m_pRight;
+				if (pLeft->m_priority <= pRight->m_priority)
+				{
+					pNewRoot = std::make_shared<TreapNode<KeyType, ValueType> >(pRight->m_key, pRight->m_value, pRight->m_priority);
+					pNewRoot->m_pLeft = pRight->m_pLeft;
+					pNewRoot->m_pRight = pRight->m_pRight;
+					pNewRoot->m_pLeft = merge(pLeft, pRight->m_pLeft);
+				}
+				else
+				{
+					pNewRoot = std::make_shared<TreapNode<KeyType, ValueType> >(pLeft->m_key, pLeft->m_value, pLeft->m_priority);
+					pNewRoot->m_pLeft = pLeft->m_pLeft;
+					pNewRoot->m_pRight = pLeft->m_pRight;
+					pNewRoot->m_pRight = merge(pLeft->m_pRight, pRight);
+				}
 			}
 			else
 			{
-				pNewRoot = std::make_shared<TreapNode<KeyType, ValueType> >(pLeft->m_key, pLeft->m_value, pLeft->m_priority);
-				pNewRoot->m_pLeft = pLeft->m_pLeft;
-				pNewRoot->m_pRight = pLeft->m_pRight;
+				if (pLeft == nullptr)
+				{
+					pNewRoot = std::make_shared<TreapNode<KeyType, ValueType> >(pRight->m_key, pRight->m_value, pRight->m_priority);
+					pNewRoot->m_pLeft = pRight->m_pLeft;
+					pNewRoot->m_pRight = pRight->m_pRight;
+				}
+				else
+				{
+					pNewRoot = std::make_shared<TreapNode<KeyType, ValueType> >(pLeft->m_key, pLeft->m_value, pLeft->m_priority);
+					pNewRoot->m_pLeft = pLeft->m_pLeft;
+					pNewRoot->m_pRight = pLeft->m_pRight;
+				}
 			}
+
+			return pNewRoot;
 		}
 
-		return pNewRoot;
-	}
-
-	TreapNodePtr split(const KeyType& key, TreapNodePtr& pLeft, TreapNodePtr& pRight)
-	{
-		TreapNodePtr pNewRoot;
+		TreapNodePtr split(const KeyType& key, TreapNodePtr& pLeft, TreapNodePtr& pRight)
 		{
-			pNewRoot = std::make_shared<TreapNode<KeyType, ValueType> >(m_key, m_value, m_priority);
-			pNewRoot->m_pLeft = m_pLeft;
-			pNewRoot->m_pRight = m_pRight;
-		}
-
-		if (m_key <= key)
-		{
-			if (pNewRoot->m_pRight != nullptr)
+			TreapNodePtr pNewRoot;
 			{
-				pNewRoot->m_pRight->split(key, pNewRoot->m_pRight, pRight);
+				pNewRoot = std::make_shared<TreapNode<KeyType, ValueType> >(m_key, m_value, m_priority);
+				pNewRoot->m_pLeft = m_pLeft;
+				pNewRoot->m_pRight = m_pRight;
+			}
+
+			if (m_key <= key)
+			{
+				if (pNewRoot->m_pRight != nullptr)
+				{
+					pNewRoot->m_pRight->split(key, pNewRoot->m_pRight, pRight);
+				}
+				else
+					pRight = nullptr;
+
+				pLeft = pNewRoot;
 			}
 			else
-				pRight = nullptr;
-
-			pLeft = pNewRoot;
-		}
-		else
-		{
-			if (pNewRoot->m_pLeft != nullptr)
 			{
-				pNewRoot->m_pLeft->split(key, pLeft, pNewRoot->m_pLeft);
+				if (pNewRoot->m_pLeft != nullptr)
+				{
+					pNewRoot->m_pLeft->split(key, pLeft, pNewRoot->m_pLeft);
+				}
+				else
+					pLeft = nullptr;
+
+				pRight = pNewRoot;
 			}
-			else
-				pLeft = nullptr;
 
-			pRight = pNewRoot;
+			return pNewRoot;
 		}
 
-		return pNewRoot;
-	}
+		KeyType m_key;
+		int m_priority;
+		TreapNodePtr m_pLeft, m_pRight;
 
-	KeyType m_key;
-	int m_priority;
-	TreapNodePtr m_pLeft, m_pRight;
+		ValueType m_value;
+	};
 
-	ValueType m_value;
-};
-
-template<typename KeyType, typename ValueType>
-class TreapVersion
-{
-
-public:
-	using TreapNodePtr = std::shared_ptr<TreapNode<KeyType, ValueType> >;
-
-	TreapVersion() : m_pRoot(nullptr) {}
-
-	TreapVersion(const TreapNodePtr& pNode) : m_pRoot(pNode) {}
-
-	bool find(const KeyType& key, ValueType& value)
+	template<typename KeyType, typename ValueType>
+	class TreapVersion
 	{
-		if (m_pRoot == nullptr)
-			false;
 
-		TreapNodePtr curTreapNode = m_pRoot->find(key);
-		if (!curTreapNode)
-		{
-			return false;
-		}
-		value = curTreapNode->value();
-		return true;
-	}
+	public:
+		using TreapNodePtr = std::shared_ptr<TreapNode<KeyType, ValueType> >;
 
-	TreapNodePtr erase(const KeyType& key, bool& isSuccess)
-	{
-		isSuccess = false;
-		assert(m_pRoot != nullptr);
-		if (m_pRoot == nullptr)
-			throw std::exception();
+		TreapVersion() : m_pRoot(nullptr) {}
 
-		TreapNodePtr curTreapNode = m_pRoot->find(key);
-		if (curTreapNode != nullptr)
-		{
-			isSuccess = true;
-			return m_pRoot->erase(key);
-		}
+		TreapVersion(const TreapNodePtr& pNode) : m_pRoot(pNode) {}
 
-		return nullptr;
-	}
-
-	TreapNodePtr insert(const KeyType& key, const ValueType& value)
-	{
-		TreapNodePtr curTreapNode;
-		if (m_pRoot != nullptr)
-		{
-			curTreapNode = m_pRoot->setValue(key, value);
-		}
-		 
-		if (curTreapNode != nullptr)
-		{
-			return curTreapNode;
-		}
-		else
+		bool find(const KeyType& key, ValueType& value)
 		{
 			if (m_pRoot == nullptr)
-				return std::make_shared<TreapNode<KeyType, ValueType> >(key, value);
+				false;
+
+			TreapNodePtr curTreapNode = m_pRoot->find(key);
+			if (!curTreapNode)
+			{
+				return false;
+			}
+			value = curTreapNode->value();
+			return true;
+		}
+
+		TreapNodePtr erase(const KeyType& key, bool& isSuccess)
+		{
+			isSuccess = false;
+			assert(m_pRoot != nullptr);
+			if (m_pRoot == nullptr)
+				throw std::exception();
+
+			TreapNodePtr curTreapNode = m_pRoot->find(key);
+			if (curTreapNode != nullptr)
+			{
+				isSuccess = true;
+				return m_pRoot->erase(key);
+			}
+
+			return nullptr;
+		}
+
+		TreapNodePtr insert(const KeyType& key, const ValueType& value)
+		{
+			TreapNodePtr curTreapNode;
+			if (m_pRoot != nullptr)
+			{
+				curTreapNode = m_pRoot->setValue(key, value);
+			}
+
+			if (curTreapNode != nullptr)
+			{
+				return curTreapNode;
+			}
 			else
+			{
+				if (m_pRoot == nullptr)
+					return std::make_shared<TreapNode<KeyType, ValueType> >(key, value);
+				else
+					return m_pRoot->insert(key, value);
+			}
+		}
+
+		TreapNodePtr setValue(const KeyType& key, const ValueType& value)
+		{
+			if (m_pRoot == nullptr)
+			{
+				return std::make_shared<TreapNode<KeyType, ValueType> >(key, value);
+			}
+
+			auto pNewRoot = m_pRoot->setValue(key, value);
+			if (pNewRoot == nullptr)
+			{
 				return m_pRoot->insert(key, value);
+			}
+			else
+				return pNewRoot;
 		}
-	}
 
-	TreapNodePtr setValue(const KeyType& key, const ValueType& value)
-	{
-		if (m_pRoot == nullptr)
+		void print()
 		{
-			return std::make_shared<TreapNode<KeyType, ValueType> >(key, value);
+			if (m_pRoot == nullptr)
+				return;
+
+			m_pRoot->print();
 		}
 
-		auto pNewRoot = m_pRoot->setValue(key, value);
-		if (pNewRoot == nullptr)
-		{
-			return m_pRoot->insert(key, value);
-		}
-		else
-			return pNewRoot;
-	}
-
-	void print()
-	{
-		if (m_pRoot == nullptr)
-			return;
-
-		m_pRoot->print();
-	}
-
-private:
-	TreapNodePtr m_pRoot;
-};
+	private:
+		TreapNodePtr m_pRoot;
+	};
 
 }
 

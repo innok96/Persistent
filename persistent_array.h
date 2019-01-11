@@ -11,185 +11,185 @@
 namespace
 {
 
-template<typename T>
-struct Node 
-{
-	Node() 
+	template<typename T>
+	struct Node
 	{
-		m_index = 0;
-		m_value = T{};
-		m_pLeft = m_pRight = nullptr;
-	}
-
-	Node(int index, T value) 
-	{
-		m_index = index;
-		m_value = value;
-		m_pLeft = m_pRight = nullptr;
-	}
-
-
-	int m_index;
-	T m_value;
-
-	std::shared_ptr<Node<T> > m_pLeft;
-	std::shared_ptr<Node<T> > m_pRight;
-};
-
-template<typename T>
-class PersistentArrayVersion
-{
-
-public:
-	PersistentArrayVersion()
-	{
-		m_pRoot = nullptr;
-		m_size = 0;
-	}
-
-	PersistentArrayVersion(int size)
-	{
-		m_size = size;
-		std::vector<int> aIndexes(m_size - 1);
-		std::iota(aIndexes.begin(), aIndexes.end(), 1);
-
-		random_shuffle(aIndexes.begin(), aIndexes.end());
-
-		m_pRoot = std::make_shared<Node<T> >();
-		for (const auto& index : aIndexes) 
+		Node()
 		{
-			create(m_pRoot, index);
-		}
-	}
-
-	PersistentArrayVersion(const PersistentArrayVersion& other)
-	{
-		this->m_size = other.m_size;
-		this->m_pRoot = other.m_pRoot;
-	}
-
-	PersistentArrayVersion& operator=(const PersistentArrayVersion& other)
-	{
-		this->m_size = other.m_size;
-		this->m_pRoot = other.m_pRoot;
-		return *this;
-	}
-
-	void setValue(int index, T value) 
-	{
-		m_pRoot = setValue(m_pRoot, index, value);
-	}
-
-	T getValue(int index) 
-	{
-		return getValue(m_pRoot, index);
-	}
-
-	void print()
-	{
-		int deep = 0;
-		print(m_pRoot, deep);
-		std::cout << std::endl;
-		//std::cout << deep << std::endl;
-	}
-	
-private:
-	using NodePtr = std::shared_ptr<Node<T> >;
-
-	int m_size;
-	NodePtr m_pRoot;
-
-	void create(NodePtr& pRoot, int index) 
-	{
-		if (pRoot == nullptr) 
-		{
-			pRoot = std::make_shared<Node<T> >(index, T{});
-			return;
+			m_index = 0;
+			m_value = T{};
+			m_pLeft = m_pRight = nullptr;
 		}
 
-		if (index < pRoot->m_index) 
+		Node(int index, T value)
 		{
-			create(pRoot->m_pLeft, index);
+			m_index = index;
+			m_value = value;
+			m_pLeft = m_pRight = nullptr;
 		}
-		else 
-		{
-			create(pRoot->m_pRight, index);
-		}
-	}
 
-	NodePtr setValue(NodePtr& pRoot, int index, T value)
+
+		int m_index;
+		T m_value;
+
+		std::shared_ptr<Node<T> > m_pLeft;
+		std::shared_ptr<Node<T> > m_pRight;
+	};
+
+	template<typename T>
+	class PersistentArrayVersion
 	{
-		if (pRoot == nullptr) 
+
+	public:
+		PersistentArrayVersion()
 		{
-			return pRoot;
+			m_pRoot = nullptr;
+			m_size = 0;
 		}
 
-		NodePtr pNode = nullptr;
-		if (index == pRoot->m_index) 
+		PersistentArrayVersion(int size)
 		{
-			pNode = std::make_shared<Node<T> >(index, value);
-			pNode->m_pLeft = pRoot->m_pLeft;
-			pNode->m_pRight = pRoot->m_pRight;
+			m_size = size;
+			std::vector<int> aIndexes(m_size - 1);
+			std::iota(aIndexes.begin(), aIndexes.end(), 1);
+
+			random_shuffle(aIndexes.begin(), aIndexes.end());
+
+			m_pRoot = std::make_shared<Node<T> >();
+			for (const auto& index : aIndexes)
+			{
+				create(m_pRoot, index);
+			}
+		}
+
+		PersistentArrayVersion(const PersistentArrayVersion& other)
+		{
+			this->m_size = other.m_size;
+			this->m_pRoot = other.m_pRoot;
+		}
+
+		PersistentArrayVersion& operator=(const PersistentArrayVersion& other)
+		{
+			this->m_size = other.m_size;
+			this->m_pRoot = other.m_pRoot;
+			return *this;
+		}
+
+		void setValue(int index, T value)
+		{
+			m_pRoot = setValue(m_pRoot, index, value);
+		}
+
+		T getValue(int index)
+		{
+			return getValue(m_pRoot, index);
+		}
+
+		void print()
+		{
+			int deep = 0;
+			print(m_pRoot, deep);
+			std::cout << std::endl;
+			//std::cout << deep << std::endl;
+		}
+
+	private:
+		using NodePtr = std::shared_ptr<Node<T> >;
+
+		int m_size;
+		NodePtr m_pRoot;
+
+		void create(NodePtr& pRoot, int index)
+		{
+			if (pRoot == nullptr)
+			{
+				pRoot = std::make_shared<Node<T> >(index, T{});
+				return;
+			}
+
+			if (index < pRoot->m_index)
+			{
+				create(pRoot->m_pLeft, index);
+			}
+			else
+			{
+				create(pRoot->m_pRight, index);
+			}
+		}
+
+		NodePtr setValue(NodePtr& pRoot, int index, T value)
+		{
+			if (pRoot == nullptr)
+			{
+				return pRoot;
+			}
+
+			NodePtr pNode = nullptr;
+			if (index == pRoot->m_index)
+			{
+				pNode = std::make_shared<Node<T> >(index, value);
+				pNode->m_pLeft = pRoot->m_pLeft;
+				pNode->m_pRight = pRoot->m_pRight;
+				return pNode;
+			}
+
+			if (index < pRoot->m_index)
+			{
+				NodePtr pLeft = setValue(pRoot->m_pLeft, index, value);
+				if (pLeft != nullptr)
+				{
+					pNode = std::make_shared<Node<T> >(pRoot->m_index, pRoot->m_value);
+					pNode->m_pLeft = pLeft;
+					pNode->m_pRight = pRoot->m_pRight;
+				}
+			}
+			else
+			{
+				NodePtr pRight = setValue(pRoot->m_pRight, index, value);
+				if (pRight != nullptr)
+				{
+					pNode = std::make_shared<Node<T> >(pRoot->m_index, pRoot->m_value);
+					pNode->m_pLeft = pRoot->m_pLeft;
+					pNode->m_pRight = pRight;
+				}
+			}
 			return pNode;
 		}
 
-		if (index < pRoot->m_index) 
+		T getValue(const NodePtr& pRoot, int index)
 		{
-			NodePtr pLeft = setValue(pRoot->m_pLeft, index, value);
-			if (pLeft != nullptr)
+			if (pRoot == nullptr)
 			{
-				pNode = std::make_shared<Node<T> >(pRoot->m_index, pRoot->m_value);
-				pNode->m_pLeft = pLeft;
-				pNode->m_pRight = pRoot->m_pRight;
+				return 0;
+			}
+
+			if (index == pRoot->m_index)
+			{
+				return pRoot->m_value;
+			}
+
+			if (index < pRoot->m_index)
+			{
+				return getValue(pRoot->m_pLeft, index);
+			}
+			else
+			{
+				return getValue(pRoot->m_pRight, index);
 			}
 		}
-		else 
-		{
-			NodePtr pRight = setValue(pRoot->m_pRight, index, value);
-			if (pRight != nullptr)
-			{
-				pNode = std::make_shared<Node<T> >(pRoot->m_index, pRoot->m_value);
-				pNode->m_pLeft = pRoot->m_pLeft;
-				pNode->m_pRight = pRight;
-			}
-		}
-		return pNode;
-	}
 
-	T getValue(const NodePtr& pRoot, int index)
-	{
-		if (pRoot == nullptr)
+		void print(const NodePtr& pRoot, int& deep)
 		{
-			return 0;
-		}
+			if (pRoot == nullptr)
+				return;
 
-		if (index == pRoot->m_index)
-		{
-			return pRoot->m_value;
+			int deepLeft = 0, deepRight = 0;
+			print(pRoot->m_pLeft, deepLeft);
+			std::cout << pRoot->m_value << " ";
+			print(pRoot->m_pRight, deepRight);
+			deep = std::max(deepLeft, deepRight) + 1;
 		}
-
-		if (index < pRoot->m_index)
-		{
-			return getValue(pRoot->m_pLeft, index);
-		}
-		else 
-		{
-			return getValue(pRoot->m_pRight, index);
-		}
-	}
-
-	void print(const NodePtr& pRoot, int& deep)
-	{
-		if (pRoot == nullptr)
-			return;
-
-		int deepLeft = 0, deepRight = 0;
-		print(pRoot->m_pLeft, deepLeft);
-		std::cout << pRoot->m_value << " ";
-		print(pRoot->m_pRight, deepRight);
-		deep = std::max(deepLeft, deepRight) + 1;
-	}
-};
+	};
 
 }
 
